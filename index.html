@@ -38,7 +38,7 @@ function upload_photo(canvas) {
 			fd.append('success_action_redirect', aws_redirect);
 			fd.append('Content-Type','image/jpeg');
 			fd.append('policy', aws_policy);
-			fd.append('signature', aws_sig);
+			fd.append('signature', aws_signature);
 
 			fd.append('file', blob, 'file');
 
