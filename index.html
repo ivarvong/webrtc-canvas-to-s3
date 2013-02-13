@@ -1,0 +1,115 @@
+<video id="video"></video>
+<button id="startbutton">Take Photo and upload to the internet forever</button>
+<canvas id="canvas"></canvas>
+
+<script src="canvas-to-blob.js"></script>
+<script>
+function makeid() {
+    var text = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for( var i=0; i < 10; i++ )
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    return text;
+}
+window.uuid = makeid();
+</script>
+
+<script>
+
+aws_key = "AKIAIAOQGJVG33MASZ2A";
+
+aws_policy = "eyJleHBpcmF0aW9uIjoiMjA0MC0wMS0wMVQwMTowMTowMS4wMDBaIiwiY29uZGl0aW9ucyI6W3siYnVja2V0IjoidW92YWxlbnRpbmUifSx7ImFjbCI6InB1YmxpYy1yZWFkIn0seyJzdWNjZXNzX2FjdGlvbl9zdGF0dXMiOiIyMDEifSx7InN1Y2Nlc3NfYWN0aW9uX3JlZGlyZWN0IjoiaHR0cHM6Ly91b3ZhbGVudGluZS5oZXJva3VhcHAuY29tL2FwaS9zM19jYWxsYmFjayJ9LFsic3RhcnRzLXdpdGgiLCIka2V5IiwiIl0sWyJzdGFydHMtd2l0aCIsIiRDb250ZW50LVR5cGUiLCIiXSxbImNvbnRlbnQtbGVuZ3RoLXJhbmdlIiwwLDUyNDI4ODBdXX0=";
+
+aws_signature = "erZsGI62MFFOID0qMvgOsFIKrfw=";
+
+aws_redirect = "https://uovalentine.herokuapp.com/api/s3_callback"
+
+function upload_photo(canvas) {
+	console.log('uplaod+photo', canvas)
+	canvas.toBlob(
+        function (blob) {
+			var xhr = new XMLHttpRequest()
+			  , fd = new FormData();
+		
+			fd.append('key', window.uuid+'.jpg');
+			fd.append('AWSAccessKeyId', aws_key);
+			fd.append('acl', 'public-read');
+			fd.append('success_action_status', '201');
+			fd.append('success_action_redirect', aws_redirect);
+			fd.append('Content-Type','image/jpeg');
+			fd.append('policy', aws_policy);
+			fd.append('signature', aws_sig);
+
+			fd.append('file', blob, 'file');
+
+			xhr.open('POST', 'https://uovalentine.s3.amazonaws.com/', true);
+			xhr.send(fd);
+
+        }, 'image/jpeg'
+    );
+}
+
+</script>
+
+<script>
+(function() {
+
+  var streaming = false,
+      video        = document.querySelector('#video'),
+      cover        = document.querySelector('#cover'),
+      canvas       = document.querySelector('#canvas'),
+      photo        = document.querySelector('#photo'),
+      startbutton  = document.querySelector('#startbutton'),
+      width = 600,
+      height = 0;
+
+  navigator.getMedia = ( navigator.getUserMedia || 
+                         navigator.webkitGetUserMedia ||
+                         navigator.mozGetUserMedia ||
+                         navigator.msGetUserMedia);
+
+  navigator.getMedia(
+    { 
+      video: true, 
+      audio: false 
+    },
+    function(stream) {
+      if (navigator.mozGetUserMedia) { 
+        video.mozSrcObject = stream;
+      } else {
+        var vendorURL = window.URL || window.webkitURL;
+        video.src = vendorURL ? vendorURL.createObjectURL(stream) : stream;
+      }
+      video.play();
+    },
+    function(err) {
+      console.log("An error occured! " + err);
+    }
+  );
+
+  video.addEventListener('canplay', function(ev){
+    if (!streaming) {
+      height = video.videoHeight / (video.videoWidth/width);
+      video.setAttribute('width', width);
+      video.setAttribute('height', height);
+      canvas.setAttribute('width', width);
+      canvas.setAttribute('height', height);
+      streaming = true;
+    }
+  }, false);
+
+  function takepicture() {
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+
+    window.upload_photo(canvas); // THIS!!!
+  }
+
+  startbutton.addEventListener('click', function(ev){
+      takepicture();
+      ev.preventDefault();
+  }, false);
+
+})();
+</script>
